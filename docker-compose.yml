@@ -1,0 +1,10 @@
+services:
+  dmx-pallets:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dmx-pallets:local
+    container_name: dmx-pallets
+    ports:
+      - "8080:80"
+    restart: unless-stopped
