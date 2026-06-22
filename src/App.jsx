@@ -387,6 +387,71 @@ function calculateClientRentals(transactions) {
   return rentals;
 }
 
+function isRepairTransaction(trx) {
+  return (
+    trx.condition === "rusak ringan" ||
+    trx.condition === "rusak berat" ||
+    trx.movement === "laporan_rusak"
+  );
+}
+
+function repairReporterLabel(trx) {
+  if (trx.movement === "laporan_rusak") {
+    return trx.client || "-";
+  }
+
+  return trx.client || "Operasional gudang";
+}
+
+function calculateRepairReporters(transactions) {
+  const reporters = new Map();
+
+  transactions.forEach((trx) => {
+    if (!isRepairTransaction(trx)) return;
+
+    const reporter = repairReporterLabel(trx);
+    const key = clientKey(reporter);
+    const existing = reporters.get(key);
+    const row =
+      existing ||
+      {
+        reporter,
+        total: 0,
+        light: 0,
+        heavy: 0,
+        clientTotal: 0,
+        clientLight: 0,
+        clientHeavy: 0,
+      };
+
+    row.total += trx.quantity;
+
+    if (trx.condition === "rusak ringan") {
+      row.light += trx.quantity;
+    }
+
+    if (trx.condition === "rusak berat") {
+      row.heavy += trx.quantity;
+    }
+
+    if (trx.movement === "laporan_rusak") {
+      row.clientTotal += trx.quantity;
+
+      if (trx.condition === "rusak ringan") {
+        row.clientLight += trx.quantity;
+      }
+
+      if (trx.condition === "rusak berat") {
+        row.clientHeavy += trx.quantity;
+      }
+    }
+
+    reporters.set(key, row);
+  });
+
+  return reporters;
+}
+
 function getClientRentalsByName(rentals, clientName) {
   return Array.from(rentals.values()).filter(
     (row) => clientKey(row.client) === clientKey(clientName),
@@ -420,6 +485,14 @@ function detailsLabel(trx) {
   return trx.condition;
 }
 
+function clientRepairSummary(repair) {
+  if (!repair || repair.clientTotal < 1) return "Tidak ada repair";
+
+  return `${numberFormat.format(repair.clientTotal)} pallet (${numberFormat.format(
+    repair.clientLight,
+  )} ringan, ${numberFormat.format(repair.clientHeavy)} berat)`;
+}
+
 export default function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const [transactions, setTransactions] = useState(loadTransactions);
@@ -442,6 +515,10 @@ export default function App() {
     () => calculateClientRentals(transactions),
     [transactions],
   );
+  const repairReporters = useMemo(
+    () => calculateRepairReporters(transactions),
+    [transactions],
+  );
   const damageRental = useMemo(
     () => findClientRental(clientRentals, form.client, form.palletType),
     [clientRentals, form.client, form.palletType],
@@ -457,6 +534,7 @@ export default function App() {
     () =>
       clients.map((client) => {
         const rentals = getClientRentalsByName(clientRentals, client.name);
+        const repair = repairReporters.get(clientKey(client.name));
         const activeQuantity = rentals.reduce(
           (total, rental) => total + rental.activeQuantity,
           0,
@@ -465,6 +543,8 @@ export default function App() {
         return {
           ...client,
           activeQuantity,
+          hasRepair: Boolean(repair && repair.clientTotal > 0),
+          repairSummary: clientRepairSummary(repair),
           rentalSummary:
             rentals
               .map(
@@ -476,7 +556,7 @@ export default function App() {
               .join(" | ") || "Tidak ada sewa aktif",
         };
       }),
-    [clients, clientRentals],
+    [clients, clientRentals, repairReporters],
   );
   const filteredTransactions = useMemo(() => {
     const search = dataFilters.search.toLowerCase().trim();
@@ -726,11 +806,10 @@ export default function App() {
   }
 
   const recentTransactions = transactions.slice(0, 8);
-  const repairTransactions = transactions.filter(
-    (trx) =>
-      trx.condition === "rusak ringan" ||
-      trx.condition === "rusak berat" ||
-      trx.movement === "laporan_rusak",
+  const repairTransactions = transactions.filter(isRepairTransaction);
+  const repairReporterRows = Array.from(repairReporters.values()).sort(
+    (left, right) =>
+      right.total - left.total || left.reporter.localeCompare(right.reporter),
   );
   const repairTotal = summary.totals.repairLight + summary.totals.repairHeavy;
   const clientDamageTotal =
@@ -808,6 +887,7 @@ export default function App() {
       {activePage === "repair" && (
         <RepairPage
           clientDamageTotal={clientDamageTotal}
+          repairReporters={repairReporterRows}
           repairTotal={repairTotal}
           transactions={repairTransactions}
         />
@@ -1288,6 +1368,10 @@ function ClientsPage({
                   <dd>{client.phone || client.email || "-"}</dd>
                 </div>
                 <div>
+                  <dt>Repair</dt>
+                  <dd>{client.repairSummary}</dd>
+                </div>
+                <div>
                   <dt>Ringkasan</dt>
                   <dd>{client.rentalSummary}</dd>
                 </div>
@@ -1318,7 +1402,12 @@ function ClientsPage({
   );
 }
 
-function RepairPage({ clientDamageTotal, repairTotal, transactions }) {
+function RepairPage({
+  clientDamageTotal,
+  repairReporters,
+  repairTotal,
+  transactions,
+}) {
   return (
     <section className="panel page-section">
       <div className="panel-title section-title-row">
@@ -1335,7 +1424,30 @@ function RepairPage({ clientDamageTotal, repairTotal, transactions }) {
           </span>
         </div>
       </div>
-      <TransactionsTable transactions={transactions} showNote />
+      <div className="repair-reporters" aria-label="Pelapor repair">
+        <h3>Pelapor repair</h3>
+        <div className="compact-list">
+          {repairReporters.length === 0 ? (
+            <div className="compact-row">
+              <span>Belum ada laporan repair</span>
+              <strong>0 pallet</strong>
+              <small>Ringan 0 | Berat 0</small>
+            </div>
+          ) : (
+            repairReporters.map((reporter) => (
+              <div className="compact-row" key={reporter.reporter}>
+                <span>{reporter.reporter}</span>
+                <strong>{numberFormat.format(reporter.total)} pallet</strong>
+                <small>
+                  Ringan {numberFormat.format(reporter.light)} | Berat{" "}
+                  {numberFormat.format(reporter.heavy)}
+                </small>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      <TransactionsTable transactions={transactions} showNote showReporter />
     </section>
   );
 }
@@ -1374,7 +1486,13 @@ function SecurityPage() {
   );
 }
 
-function TransactionsTable({ showNote = false, transactions }) {
+function TransactionsTable({
+  showNote = false,
+  showReporter = false,
+  transactions,
+}) {
+  const columnCount = 5 + (showReporter ? 1 : 0) + (showNote ? 1 : 0);
+
   return (
     <div className="table-wrap">
       <table>
@@ -1385,13 +1503,14 @@ function TransactionsTable({ showNote = false, transactions }) {
             <th>Tipe</th>
             <th>Jumlah</th>
             <th>Client/Kondisi</th>
+            {showReporter && <th>Pelapor repair</th>}
             {showNote && <th>Catatan</th>}
           </tr>
         </thead>
         <tbody>
           {transactions.length === 0 ? (
             <tr>
-              <td colSpan={showNote ? 6 : 5}>Tidak ada data.</td>
+              <td colSpan={columnCount}>Tidak ada data.</td>
             </tr>
           ) : (
             transactions.map((trx) => (
@@ -1401,6 +1520,7 @@ function TransactionsTable({ showNote = false, transactions }) {
                 <td>Pallet {trx.palletType}</td>
                 <td>{numberFormat.format(trx.quantity)}</td>
                 <td>{detailsLabel(trx)}</td>
+                {showReporter && <td>{repairReporterLabel(trx)}</td>}
                 {showNote && <td>{trx.note || "-"}</td>}
               </tr>
             ))

@@ -609,6 +609,16 @@ tbody tr:last-child td {
   margin-top: 16px;
 }
 
+.repair-reporters {
+  margin-top: 16px;
+}
+
+.repair-reporters h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 15px;
+}
+
 .compact-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(160px, auto) minmax(0, 1fr);
@@ -659,7 +669,7 @@ tbody tr:last-child td {
 .client-card dl {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
 }
