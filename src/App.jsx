@@ -1062,7 +1062,6 @@ function DashboardPage({
               <article className="type-card" key={card.type}>
                 <div className="type-card-header">
                   <h2>Tipe Pallet {card.type}</h2>
-                  <span>Operasional</span>
                 </div>
                 <div className="type-card-body">
                   <div className="pallet-visual">
