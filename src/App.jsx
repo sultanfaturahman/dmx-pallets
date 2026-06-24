@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
   ClipboardList,
   Database,
   Edit3,
   Globe,
+  Layers3,
   LayoutDashboard,
+  PackageCheck,
   Plus,
   RotateCcw,
   Save,
@@ -14,6 +20,7 @@ import {
   ShieldCheck,
   Trash2,
   Users,
+  Warehouse,
   Wrench,
 } from "lucide-react";
 
@@ -108,6 +115,29 @@ const pages = [
   { id: "repair", label: "Repair", icon: Wrench },
   { id: "security", label: "Security", icon: ShieldCheck },
 ];
+
+const pageMeta = {
+  dashboard: {
+    title: "Pallet Stok Management",
+    subtitle: "Kelola stok pallet, sewa client, incoming, repair, dan keamanan.",
+  },
+  data: {
+    title: "Data Transaksi",
+    subtitle: "Audit seluruh pergerakan pallet dengan filter cepat dan tabel rapi.",
+  },
+  clients: {
+    title: "Client Management",
+    subtitle: "Kelola daftar client, PIC, kontak, status, dan sewa aktif.",
+  },
+  repair: {
+    title: "Repair & Damage",
+    subtitle: "Pantau pallet rusak ringan, rusak berat, dan laporan dari client.",
+  },
+  security: {
+    title: "Security Center",
+    subtitle: "Ringkasan kontrol keamanan untuk website, server, database, dan audit.",
+  },
+};
 
 const numberFormat = new Intl.NumberFormat("id-ID");
 
@@ -814,86 +844,141 @@ export default function App() {
   const repairTotal = summary.totals.repairLight + summary.totals.repairHeavy;
   const clientDamageTotal =
     summary.totals.clientDamageLight + summary.totals.clientDamageHeavy;
+  const currentPage = pageMeta[activePage] || pageMeta.dashboard;
+  const currentDate = new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
+  const currentTime = new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
 
   return (
-    <main className="page">
-      <header className="header app-header">
-        <div>
-          <h1>Pallet Stok Management</h1>
-          <p>Sewa client minimal 1 tahun, stok masuk, stok keluar, dan repair.</p>
+    <main className="app-shell">
+      <aside className="sidebar" aria-label="Navigasi aplikasi">
+        <div className="brand">
+          <span className="brand-mark">
+            <Layers3 aria-hidden="true" size={29} />
+          </span>
+          <strong>
+            Pallet Stok
+            <span>Management</span>
+          </strong>
         </div>
-        <button className="secondary-button" type="button" onClick={clearData}>
-          <RotateCcw aria-hidden="true" size={16} />
-          Reset
-        </button>
-      </header>
 
-      <nav className="page-nav" aria-label="Navigasi halaman">
-        {pages.map((page) => {
-          const Icon = page.icon;
-          return (
-            <button
-              className={activePage === page.id ? "active" : ""}
-              key={page.id}
-              type="button"
-              onClick={() => setActivePage(page.id)}
-            >
-              <Icon aria-hidden="true" size={16} />
-              {page.label}
+        <nav className="page-nav" aria-label="Navigasi halaman">
+          {pages.map((page) => {
+            const Icon = page.icon;
+            return (
+              <button
+                className={activePage === page.id ? "active" : ""}
+                key={page.id}
+                type="button"
+                onClick={() => setActivePage(page.id)}
+              >
+                <Icon aria-hidden="true" size={19} />
+                <span>{page.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-profile">
+          <span>WS</span>
+          <div>
+            <strong>Warehouse Staff</strong>
+            <small>Gudang Utama</small>
+          </div>
+        </div>
+      </aside>
+
+      <section className="app-main">
+        <header className="topbar">
+          <div className="topbar-copy">
+            <h1>{currentPage.title}</h1>
+            <p>{currentPage.subtitle}</p>
+          </div>
+
+          <div className="topbar-actions">
+            <button className="secondary-button reset-button" type="button" onClick={clearData}>
+              <RotateCcw aria-hidden="true" size={16} />
+              Reset
             </button>
-          );
-        })}
-      </nav>
+            <div className="status-strip" aria-label="Status operasional">
+              <span className="status-item success">
+                <CheckCircle2 aria-hidden="true" size={18} />
+                <strong>Sistem</strong>
+                <small>Normal</small>
+              </span>
+              <span className="status-item">
+                <Warehouse aria-hidden="true" size={18} />
+                <strong>Gudang</strong>
+                <small>Utama</small>
+              </span>
+              <span className="status-item">
+                <CalendarDays aria-hidden="true" size={18} />
+                <strong>{currentTime}</strong>
+                <small>{currentDate}</small>
+              </span>
+            </div>
+          </div>
+        </header>
 
-      {message && <p className="message global-message">{message}</p>}
+        <div className="content-shell">
+          {message && <p className="message global-message">{message}</p>}
 
-      {activePage === "dashboard" && (
-        <DashboardPage
-          activeClients={activeClients}
-          clientDamageTotal={clientDamageTotal}
-          clientRentals={clientRentals}
-          damageRental={damageRental}
-          form={form}
-          recentTransactions={recentTransactions}
-          repairTotal={repairTotal}
-          summary={summary}
-          onChangeMovement={changeMovement}
-          onSubmitTransaction={submitTransaction}
-          onUpdateForm={updateForm}
-        />
-      )}
+          {activePage === "dashboard" && (
+            <DashboardPage
+              activeClients={activeClients}
+              clientDamageTotal={clientDamageTotal}
+              clientRentals={clientRentals}
+              damageRental={damageRental}
+              form={form}
+              recentTransactions={recentTransactions}
+              repairTotal={repairTotal}
+              summary={summary}
+              onChangeMovement={changeMovement}
+              onOpenData={() => setActivePage("data")}
+              onSubmitTransaction={submitTransaction}
+              onUpdateForm={updateForm}
+            />
+          )}
 
-      {activePage === "data" && (
-        <DataPage
-          filters={dataFilters}
-          transactions={filteredTransactions}
-          onUpdateFilter={updateFilter}
-        />
-      )}
+          {activePage === "data" && (
+            <DataPage
+              filters={dataFilters}
+              transactions={filteredTransactions}
+              onUpdateFilter={updateFilter}
+            />
+          )}
 
-      {activePage === "clients" && (
-        <ClientsPage
-          clientForm={clientForm}
-          clients={clientStats}
-          editingClientId={editingClientId}
-          onCancelEdit={cancelClientEdit}
-          onEditClient={editClient}
-          onRemoveClient={removeClient}
-          onSubmitClient={submitClient}
-          onUpdateClientForm={updateClientForm}
-        />
-      )}
+          {activePage === "clients" && (
+            <ClientsPage
+              clientForm={clientForm}
+              clients={clientStats}
+              editingClientId={editingClientId}
+              onCancelEdit={cancelClientEdit}
+              onEditClient={editClient}
+              onRemoveClient={removeClient}
+              onSubmitClient={submitClient}
+              onUpdateClientForm={updateClientForm}
+            />
+          )}
 
-      {activePage === "repair" && (
-        <RepairPage
-          clientDamageTotal={clientDamageTotal}
-          repairReporters={repairReporterRows}
-          repairTotal={repairTotal}
-          transactions={repairTransactions}
-        />
-      )}
+          {activePage === "repair" && (
+            <RepairPage
+              clientDamageTotal={clientDamageTotal}
+              repairReporters={repairReporterRows}
+              repairTotal={repairTotal}
+              transactions={repairTransactions}
+            />
+          )}
 
-      {activePage === "security" && <SecurityPage />}
+          {activePage === "security" && <SecurityPage />}
+        </div>
+      </section>
     </main>
   );
 }
@@ -908,52 +993,113 @@ function DashboardPage({
   repairTotal,
   summary,
   onChangeMovement,
+  onOpenData,
   onSubmitTransaction,
   onUpdateForm,
 }) {
-  const activeRentalRows = Array.from(clientRentals.values());
+  const activeRentalRows = Array.from(clientRentals.values()).sort(
+    (left, right) => right.activeQuantity - left.activeQuantity,
+  );
+  const summaryCards = [
+    {
+      icon: PackageCheck,
+      label: "Total stok siap",
+      value: summary.totals.ready,
+      helper: "Siap operasional",
+      tone: "green",
+    },
+    {
+      icon: ArrowUpRight,
+      label: "Keluar disewa",
+      value: summary.totals.out,
+      helper: "Sewa aktif",
+      tone: "blue",
+    },
+    {
+      icon: Activity,
+      label: "Masuk pallet",
+      value: summary.totals.in,
+      helper: "Inbound tercatat",
+      tone: "teal",
+    },
+    {
+      icon: AlertTriangle,
+      label: "Perlu repair",
+      value: repairTotal,
+      helper: "Butuh tindak lanjut",
+      tone: "amber",
+    },
+  ];
+  const typeCards = [
+    {
+      image: "/assets/pallet-wood.png",
+      imageAlt: "Pallet kayu tipe A",
+      type: "A",
+    },
+    {
+      image: "/assets/pallet-plastic.png",
+      imageAlt: "Pallet plastik tipe B",
+      type: "B",
+    },
+  ];
 
   return (
     <>
       <section className="summary-grid" aria-label="Ringkasan stok pallet">
-        <SummaryCard label="Total stok siap" value={summary.totals.ready} />
-        <SummaryCard label="Keluar disewa" value={summary.totals.out} />
-        <SummaryCard label="Masuk pallet" value={summary.totals.in} />
-        <SummaryCard label="Perlu repair" value={repairTotal} />
+        {summaryCards.map((card) => (
+          <SummaryCard card={card} key={card.label} />
+        ))}
       </section>
 
-      <section className="type-grid" aria-label="Stok per tipe pallet">
-        {["A", "B"].map((type) => {
-          const row = summary.perType[type];
-          return (
-            <article className="type-card" key={type}>
-              <h2>Tipe Pallet {type}</h2>
-              <div className="type-numbers">
-                <span>
-                  Stok siap
-                  <strong>{numberFormat.format(row.ready)}</strong>
-                </span>
-                <span>
-                  Keluar
-                  <strong>{numberFormat.format(row.out)}</strong>
-                </span>
-                <span>
-                  Repair
-                  <strong>
-                    {numberFormat.format(row.repairLight + row.repairHeavy)}
-                  </strong>
-                </span>
-              </div>
-              <p>
-                Rusak ringan: {numberFormat.format(row.repairLight)} | Rusak
-                berat: {numberFormat.format(row.repairHeavy)}
-              </p>
-            </article>
-          );
-        })}
-      </section>
+      <section className="dashboard-grid">
+        <div className="type-grid" aria-label="Stok per tipe pallet">
+          {typeCards.map((card) => {
+            const row = summary.perType[card.type];
+            const repairCount = row.repairLight + row.repairHeavy;
+            const total = row.ready + row.out + repairCount;
 
-      <section className="work-area">
+            return (
+              <article className="type-card" key={card.type}>
+                <div className="type-card-header">
+                  <h2>Tipe Pallet {card.type}</h2>
+                  <span>Operasional</span>
+                </div>
+                <div className="type-card-body">
+                  <div className="pallet-visual">
+                    <img src={card.image} alt={card.imageAlt} />
+                  </div>
+                  <dl className="type-stats">
+                    <div>
+                      <dt>Stok siap</dt>
+                      <dd>{numberFormat.format(row.ready)}</dd>
+                    </div>
+                    <div>
+                      <dt>Keluar disewa</dt>
+                      <dd>{numberFormat.format(row.out)}</dd>
+                    </div>
+                    <div>
+                      <dt>Masuk</dt>
+                      <dd>{numberFormat.format(row.in)}</dd>
+                    </div>
+                    <div>
+                      <dt>Perlu repair</dt>
+                      <dd>{numberFormat.format(repairCount)}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="type-total">
+                  <span>Total tercatat</span>
+                  <strong>{numberFormat.format(total)}</strong>
+                </div>
+                <button className="ghost-action" type="button" onClick={onOpenData}>
+                  <ClipboardList aria-hidden="true" size={16} />
+                  Lihat Detail
+                </button>
+              </article>
+            );
+          })}
+        </div>
+
         <TransactionForm
           activeClients={activeClients}
           damageRental={damageRental}
@@ -962,8 +1108,10 @@ function DashboardPage({
           onSubmit={onSubmitTransaction}
           onUpdateForm={onUpdateForm}
         />
+      </section>
 
-        <section className="panel">
+      <section className="dashboard-secondary">
+        <section className="panel history-panel">
           <div className="panel-title">
             <h2>Riwayat Singkat</h2>
             <p>
@@ -973,29 +1121,38 @@ function DashboardPage({
           </div>
           <TransactionsTable transactions={recentTransactions} />
         </section>
-      </section>
 
-      <section className="panel page-section">
-        <div className="panel-title">
-          <h2>Sewa Aktif</h2>
-          <p>Daftar client yang masih menyewa pallet.</p>
-        </div>
-        <div className="compact-list">
-          {activeRentalRows.length === 0 ? (
-            <p>Belum ada sewa aktif.</p>
-          ) : (
-            activeRentalRows.map((rental) => (
-              <div className="compact-row" key={rentalKey(rental.client, rental.palletType)}>
-                <span>{rental.client}</span>
-                <strong>
-                  Tipe {rental.palletType} -{" "}
-                  {numberFormat.format(rental.activeQuantity)} pallet
-                </strong>
-                <small>{rental.yearsSummary}</small>
-              </div>
-            ))
-          )}
-        </div>
+        <section className="panel active-rentals-panel">
+          <div className="panel-title section-title-row">
+            <div>
+              <h2>Sewa Aktif</h2>
+              <p>Daftar client yang masih menyewa pallet.</p>
+            </div>
+            <button className="link-button" type="button" onClick={onOpenData}>
+              Lihat Semua
+            </button>
+          </div>
+          <div className="active-rental-list">
+            {activeRentalRows.length === 0 ? (
+              <p>Belum ada sewa aktif.</p>
+            ) : (
+              activeRentalRows.map((rental) => (
+                <article
+                  className="active-rental-row"
+                  key={rentalKey(rental.client, rental.palletType)}
+                >
+                  <div>
+                    <strong>{rental.client}</strong>
+                    <span>{rental.yearsSummary}</span>
+                  </div>
+                  <small>Tipe {rental.palletType}</small>
+                  <b>{numberFormat.format(rental.activeQuantity)}</b>
+                  <em>Aktif</em>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
       </section>
     </>
   );
@@ -1158,7 +1315,7 @@ function TransactionForm({
 
       <button className="primary-button" type="submit">
         <Save aria-hidden="true" size={16} />
-        Simpan
+        Simpan Transaksi
       </button>
     </form>
   );
@@ -1516,7 +1673,11 @@ function TransactionsTable({
             transactions.map((trx) => (
               <tr key={trx.id}>
                 <td>{trx.date}</td>
-                <td>{movementLabel(trx.movement)}</td>
+                <td>
+                  <span className={`movement-chip ${trx.movement}`}>
+                    {movementLabel(trx.movement)}
+                  </span>
+                </td>
                 <td>Pallet {trx.palletType}</td>
                 <td>{numberFormat.format(trx.quantity)}</td>
                 <td>{detailsLabel(trx)}</td>
@@ -1585,11 +1746,19 @@ function SecurityControl({ control }) {
   );
 }
 
-function SummaryCard({ label, value }) {
+function SummaryCard({ card }) {
+  const Icon = card.icon;
+
   return (
-    <article className="summary-card">
-      <span>{label}</span>
-      <strong>{numberFormat.format(value)}</strong>
+    <article className={`summary-card ${card.tone}`}>
+      <span className="summary-icon">
+        <Icon aria-hidden="true" size={24} />
+      </span>
+      <div>
+        <span>{card.label}</span>
+        <strong>{numberFormat.format(card.value)}</strong>
+        <small>{card.helper}</small>
+      </div>
     </article>
   );
 }
